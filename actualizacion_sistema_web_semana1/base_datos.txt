@@ -1,0 +1,330 @@
+CREATE DATABASE spa_tienda_mascotas;
+
+-- =====================
+-- ROLES
+-- =====================
+CREATE TABLE ROLES(
+	id_rol INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, 
+	nombre VARCHAR(256) UNIQUE NOT NULL,
+	description TEXT
+);
+
+-- =====================
+-- USUARIOS
+-- =====================
+CREATE TABLE USUARIOS(
+	id_usuario INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_rol INT, 
+	nombre VARCHAR(256),
+	email VARCHAR(100) UNIQUE,
+	password_hash VARCHAR(256),
+	estado VARCHAR(10) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado CHECK (estado IN ('activo', 'inactivo')),
+	FOREIGN KEY (id_rol) REFERENCES ROLES(id_rol) 
+    ON DELETE SET NULL
+);
+
+-- =====================
+-- CLIENTES
+-- =====================
+CREATE TABLE CLIENTES(
+	id_cliente INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_usuario INT,
+	telefono VARCHAR(20),
+	direccion TEXT,
+	ci VARCHAR(20),
+	preferencia_notificacion VARCHAR(20) DEFAULT 'whatsapp' NOT NULL,
+    CONSTRAINT chk_pref_notif CHECK (preferencia_notificacion IN ('whatsapp', 'email', 'ninguna')),
+	FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- HABILIDADES
+-- =====================
+CREATE TABLE HABILIDADES (
+    id_habilidad INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nombre_habilidad VARCHAR(100) UNIQUE NOT NULL
+);
+
+-- =====================
+-- TRABAJADORES
+-- =====================
+CREATE TABLE TRABAJADORES(
+	id_trabajadores INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_usuario INT,
+	sueldo_mensual NUMERIC(10,2),
+	id_habilidad INT,
+	turno VARCHAR(50),
+	especialidad VARCHAR(100),
+	telefono VARCHAR(20),
+	estado_trabajador VARCHAR(10) DEFAULT 'activo' NOT NULL,
+	capacidad_maxima_mascotas_dia INT DEFAULT 8 NOT NULL,
+    CONSTRAINT chk_estado_trabajador CHECK (estado_trabajador IN ('activo', 'inactivo')),
+	FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario)
+	ON DELETE CASCADE,
+	FOREIGN KEY (id_habilidad) REFERENCES HABILIDADES(id_habilidad)
+	ON DELETE SET NULL
+);
+
+-- =====================
+-- PEDIDOS CLIENTES
+-- =====================
+CREATE TABLE PEDIDOS_CLIENTES(
+	id_pedidos_clientes INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cliente INT,
+	fecha_pedido DATE,
+	total_pedido NUMERIC(10,2),
+	estado_pedido VARCHAR(10) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_pedido CHECK (estado_pedido IN ('activo', 'inactivo')),
+	FOREIGN KEY (id_cliente) REFERENCES CLIENTES(id_cliente)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- PAGO EMPLEADOS
+-- =====================
+CREATE TABLE PAGO_EMPLEADOS(
+	id_pago_empleado INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_trabajadores INT,
+	monto NUMERIC(10,2),
+	fecha_pago_empleado DATE,
+	periodo_desde DATE,
+	periodo_hasta DATE,
+	estado_pago_empleado VARCHAR(10) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_pago_empleado CHECK (estado_pago_empleado IN ('activo', 'inactivo')),
+	descripcion TEXT,
+	FOREIGN KEY (id_trabajadores) REFERENCES TRABAJADORES(id_trabajadores)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- BLOQUEO AGENDA
+-- =====================
+CREATE TABLE BLOQUEO_AGENDA(
+	id_bloqueo_agenda INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_trabajadores INT,
+	fecha_bloqueo DATE,
+	motivo TEXT,
+	FOREIGN KEY (id_trabajadores) REFERENCES TRABAJADORES(id_trabajadores)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- CAJAS
+-- =====================
+CREATE TABLE CAJAS(
+	id_cajas INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_trabajadores INT,
+	nombre_caja VARCHAR(256),
+	descripcion VARCHAR(256),
+	estado_caja VARCHAR(10) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_caja CHECK (estado_caja IN ('activo', 'inactivo')),
+	saldo_caja NUMERIC(10,2),
+	FOREIGN KEY (id_trabajadores) REFERENCES TRABAJADORES(id_trabajadores)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- MASCOTAS
+-- =====================
+CREATE TABLE MASCOTAS(
+	id_mascota INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cliente INT,
+	nombre_mascota VARCHAR(100),
+	raza VARCHAR(100),
+	edad INT,
+	tamano NUMERIC(5,2),
+	peso NUMERIC(5,2), 
+	foto_mascota TEXT,
+	FOREIGN KEY (id_cliente) REFERENCES CLIENTES(id_cliente)
+	ON DELETE CASCADE
+);
+
+-- =====================
+-- SERVICIOS
+-- =====================
+CREATE TABLE SERVICIOS(
+	id_servicio INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	nombre_del_servicio VARCHAR(256),
+	descripcion TEXT,
+	duracion_estimada_minutos INT,
+	precio NUMERIC(10,2),
+	estado_servicio VARCHAR(10) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_servicio CHECK (estado_servicio IN ('activo', 'inactivo'))
+);
+
+-- =====================
+-- VACUNAS
+-- =====================
+CREATE TABLE VACUNAS(
+	id_vacuna INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	nombre_vacuna VARCHAR(256),
+	descripcion TEXT
+);
+
+-- =====================
+-- MASCOTA VACUNAS
+-- =====================
+CREATE TABLE MASCOTA_VACUNAS(
+	id_mascota_vacuna INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_trabajadores INT,
+	id_mascota INT,
+	id_vacuna INT,
+	fecha_aplicacion DATE,
+	fecha_proxima DATE,
+	observacion TEXT,
+	FOREIGN KEY (id_trabajadores) REFERENCES TRABAJADORES(id_trabajadores) ON DELETE SET NULL,
+	FOREIGN KEY (id_mascota) REFERENCES MASCOTAS(id_mascota) ON DELETE SET NULL,
+	FOREIGN KEY (id_vacuna) REFERENCES VACUNAS(id_vacuna) ON DELETE SET NULL
+);
+
+-- =====================
+-- TRANSACCIONES
+-- =====================
+CREATE TABLE TRANSACCIONES(
+	id_transaccion INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_usuario_solicitante INT,
+	id_usuario_administracion INT,
+	id_usuario_jefe INT,
+	id_caja INT,
+	tipo TEXT,
+	monto NUMERIC(10,2), 
+	descripcion TEXT,
+	fecha_solicitud DATE DEFAULT CURRENT_DATE,
+	fecha_aprobacion_administracion DATE,
+	fecha_aprobacion_jefe DATE,
+	estado_administracion_aprob VARCHAR(15) DEFAULT 'pendiente' NOT NULL,
+    CONSTRAINT chk_estado_adm CHECK (estado_administracion_aprob IN ('pendiente', 'aprobado', 'rechazado')),
+	estado_administracion_jefe VARCHAR(15) DEFAULT 'pendiente' NOT NULL,
+    CONSTRAINT chk_estado_jefe CHECK (estado_administracion_jefe IN ('pendiente', 'aprobado', 'rechazado')),
+	FOREIGN KEY (id_usuario_solicitante) REFERENCES USUARIOS(id_usuario) ON DELETE SET NULL,
+	FOREIGN KEY (id_usuario_administracion) REFERENCES USUARIOS(id_usuario) ON DELETE SET NULL,
+	FOREIGN KEY (id_usuario_jefe) REFERENCES USUARIOS(id_usuario) ON DELETE SET NULL,
+	FOREIGN KEY (id_caja) REFERENCES CAJAS(id_cajas) ON DELETE SET NULL
+);
+
+-- =====================
+-- CITAS
+-- =====================
+CREATE TABLE CITAS(
+	id_cita INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_mascota INT,
+	id_servicio INT,
+	pagado_por_cliente INT,
+	monto_llevado_a_caja INT,
+	empleado_acargo INT,
+	conforme_cliente INT,
+	monto_pagado NUMERIC(10,2),
+	metodo_pago VARCHAR(50) DEFAULT 'efectivo' NOT NULL,
+    CONSTRAINT chk_metodo_pago CHECK (metodo_pago IN ('efectivo', 'qr', 'transferencia', 'tarjeta')),
+	motivo_cancelacion TEXT DEFAULT 'No cancelado' NOT NULL,
+	fecha_cita DATE,
+	hora_cita TIME,
+	estado_de_mascota TEXT,
+	foto_estado_mascota TEXT,
+	estado_de_cita VARCHAR(30) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_cita CHECK (estado_de_cita IN ('activo', 'en_proceso', 'listo_para_recoger', 'terminado', 'cancelado')),
+	FOREIGN KEY (id_mascota) REFERENCES MASCOTAS(id_mascota) ON DELETE SET NULL,
+	FOREIGN KEY (id_servicio) REFERENCES SERVICIOS(id_servicio) ON DELETE SET NULL,
+	FOREIGN KEY (pagado_por_cliente) REFERENCES CLIENTES(id_cliente) ON DELETE SET NULL,
+	FOREIGN KEY (monto_llevado_a_caja) REFERENCES CAJAS(id_cajas) ON DELETE CASCADE,
+	FOREIGN KEY (empleado_acargo) REFERENCES TRABAJADORES(id_trabajadores) ON DELETE CASCADE,
+	FOREIGN KEY (conforme_cliente) REFERENCES CLIENTES(id_cliente) ON DELETE CASCADE
+);
+
+-- =====================
+-- FICHAS GROOMING
+-- =====================
+CREATE TABLE FICHAS_GROOMING(
+	id_fichas_grooming INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cita INT,
+	fecha_creacion DATE,
+	fecha_cierre DATE,
+	tiempo_espera_despues_servicio_minutos INT DEFAULT 15,
+	checklist_items JSONB DEFAULT '[]'::jsonb,
+	FOREIGN KEY (id_cita) REFERENCES CITAS(id_cita) ON DELETE CASCADE
+);
+
+-- =====================
+-- PRODUCTOS
+-- =====================
+CREATE TABLE PRODUCTOS(
+	id_producto INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	nombre_producto TEXT,
+	descripcion TEXT,
+	precio NUMERIC(10,2),
+	stok_unidad INT,
+	stock_minimo INT DEFAULT 5 NOT NULL,
+	categoria TEXT,
+	estado_de_producto VARCHAR(15) DEFAULT 'activo' NOT NULL,
+    CONSTRAINT chk_estado_producto CHECK (estado_de_producto IN ('activo', 'inactivo'))
+);
+
+-- =====================
+-- FICHAS GROOMING INSUMOS
+-- =====================
+CREATE TABLE FICHAS_GROOMING_INSUMOS(
+	id_ficha_grooming_insumos INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_fichas_grooming INT,
+	id_producto INT,
+	unidades_usadas INT,
+	FOREIGN KEY (id_fichas_grooming) REFERENCES FICHAS_GROOMING(id_fichas_grooming) ON DELETE CASCADE,
+	FOREIGN KEY (id_producto) REFERENCES PRODUCTOS(id_producto) ON DELETE SET NULL
+);
+
+-- =====================
+-- OPINIONES
+-- =====================
+CREATE TABLE OPINIONES(
+	id_opinion INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cita INT,
+	id_cliente INT,
+	calificacion INT,
+	comentario TEXT,
+	fecha_opinion DATE,
+	FOREIGN KEY (id_cita) REFERENCES CITAS(id_cita) ON DELETE CASCADE,
+	FOREIGN KEY (id_cliente) REFERENCES CLIENTES(id_cliente) ON DELETE CASCADE
+);
+
+-- =====================
+-- PEDIDO CLIENTE
+-- =====================
+CREATE TABLE PEDIDIO_CLIENTE(
+	id_pedidio_cliente INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cliente INT,
+	fecha_pedido DATE,
+	FOREIGN KEY (id_cliente) REFERENCES CLIENTES(id_cliente) ON DELETE CASCADE
+);
+
+-- =====================
+-- DETALLE PEDIDO
+-- =====================
+CREATE TABLE DETALLE_PEDIDO_CLIENTE(
+	id_detalle_pedido_cliente INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_pedidio_cliente INT,
+	id_producto INT,
+	cantidad INT,
+	precio_unitario NUMERIC(10,2),
+	total NUMERIC(10,2),
+	fecha_detalle DATE DEFAULT CURRENT_DATE,
+	FOREIGN KEY (id_pedidio_cliente) REFERENCES PEDIDIO_CLIENTE(id_pedidio_cliente) ON DELETE CASCADE,
+	FOREIGN KEY (id_producto) REFERENCES PRODUCTOS(id_producto) ON DELETE CASCADE,
+	FOREIGN KEY (id_total_mandado_a_caja) REFERENCES CAJAS(id_cajas) ON DELETE SET NULL
+	FOREIGN KEY (id_total_mandado_a_caja) REFERENCES CAJAS(id_cajas) ON DELETE CASCADE
+);
+
+-- =====================
+-- CITA MOVIMIENTO
+-- =====================
+CREATE TABLE CITA_MOVIMIENTO(
+	id_movimiento INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+	id_cita INT,
+	fecha_anterior DATE,
+	fecha_nueva DATE,
+	id_usuario INT,
+	descripcion TEXT,
+	fecha_registro DATE,
+	FOREIGN KEY (id_cita) REFERENCES CITAS(id_cita) ON DELETE CASCADE,
+	FOREIGN KEY (id_usuario) REFERENCES USUARIOS(id_usuario) ON DELETE CASCADE
+);
